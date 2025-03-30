@@ -1,6 +1,5 @@
 import socket
 import threading
-import os
 
 def udp_echo():
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,6 +22,9 @@ def sendfile(fileName, conn):
                     break
                 conn.send(data)
         print("Arquivo enviado")
+    except FileNotFoundError:
+        print("Arquivo não encontrado")
+        conn.send("ERROR".encode('utf-8'))
     except Exception as e:
         print(f"Erro ao enviar arquivo: {e}")
     finally:
@@ -31,19 +33,25 @@ def sendfile(fileName, conn):
 def handle_tcp_client(conn, addr):
     print(f"TCP Client connected from {addr}")
     try:
-        data = conn.recv(1024).decode('utf-8').strip()  # Decodifica e remove espaços
-        if not data:
-            return
-        if os.path.isfile(data):
-            sendfile(data, conn)  # Envia o arquivo e fecha a conexão
-        else:
-            print("Arquivo inválido")
-            conn.sendall("Arquivo inválido".encode('utf-8'))
+        while True:
+            data = conn.recv(1024).decode('utf-8').split(",")  # Decodifica e remove espaços
+            command = data[0].strip()
+            filename = data[1].strip()
+
+            if command == "fcp_ack":
+                return
+            elif command == "get":
+                sendfile(filename, conn)  # Envia o arquivo
+            else:
+                print("Comando inválido")
+
+    except socket.timeout:
+        print("Timeout: Nenhum dado recebido.")
     except Exception as e:
         print(f"Erro: {e}")
     finally:
-        conn.close()  # Fecha a conexão explicitamente
-    print(f"TCP Client disconnected from {addr}")
+        print(f"TCP Client disconnected from {addr}")
+        conn.close()
 
 def tcp_echo():
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
