@@ -1,19 +1,41 @@
 import socket
 import threading
+import os
 
-def udp_echo():
+SERVER_ADDRESS = '0.0.0.0'
+UDP_TRANSFER_PORT = 5698
+TCP_TRANSFER_PORT = 6000
+
+def udp_negotiation():
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_sock.bind(('0.0.0.0', 5698))
+    udp_sock.bind((SERVER_ADDRESS, UDP_TRANSFER_PORT))
     print("UDP server listening on port 5698")
-    while True:
-        data, addr = udp_sock.recvfrom(1024)
-        if not data:
-            continue
-        print(f"UDP Received from {addr}: {data.decode('utf-8')}")
-        # Echo back the received data
-        udp_sock.sendto(data, addr)
+    try:
+        while True:
+            data, addr = udp_sock.recvfrom(1024)
+            message = "ERROR,PROTOCOLO INVALIDO,,"
+            command,protocol,fName = data.decode('utf-8').split(',')
+            
+            if not data:
+                continue
+            elif command != "REQUEST" or protocol != "TCP" or not os.path.isfile(fName):
+                udp_sock.sendto(message.encode('utf-8'), addr)
+                print("Request inválido")
+            else:
+                message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
+                udp_sock.sendto(message.encode('utf-8'), addr)
+                print("Porta enviada")
+            
+            print(f"UDP Received: {data.decode('utf-8')}")
+    except Exception as e:
+            udp_sock.sendto(message.encode('utf-8'), addr)
+            print(f"Erro no UDP: {e}")
+    finally:
+        print(f"UDP Client disconnected")
+     
+    
 
-def sendfile(fileName, conn):
+def send_file(fileName, conn):
     try:
         with open(fileName, 'rb') as file:
             while True:
@@ -41,14 +63,14 @@ def handle_tcp_client(conn, addr):
             if command == "fcp_ack":
                 return
             elif command == "get":
-                sendfile(filename, conn)  # Envia o arquivo
+                send_file(filename, conn)  # Envia o arquivo
             else:
                 print("Comando inválido")
 
     except socket.timeout:
         print("Timeout: Nenhum dado recebido.")
     except Exception as e:
-        print(f"Erro: {e}")
+        print(f"Erro no TCP: {e}")
     finally:
         print(f"TCP Client disconnected from {addr}")
         conn.close()
@@ -67,7 +89,7 @@ def tcp_echo():
 
 if __name__ == '__main__':
     # Iniciar thread para UDP
-    udp_thread = threading.Thread(target=udp_echo)
+    udp_thread = threading.Thread(target=udp_negotiation)
     udp_thread.daemon = True
     udp_thread.start()
 
