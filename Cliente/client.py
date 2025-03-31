@@ -2,43 +2,45 @@ import socket
 import os
 import configparser
 
-def negotiate_port(sock, fName):
-    sock.connect((SERVER_ADDRESS, UDP_TRANSFER_PORT))
-    try:
+def negotiate_port(fName):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.settimeout(5)
         message = "REQUEST,TCP,{}".format(fName)
-        sock.sendall(message.encode('utf-8'))
-        resp = sock.recv(1024).decode('utf-8').split(',')
+        sock.sendto(message.encode('utf-8'), (SERVER_ADDRESS, UDP_TRANSFER_PORT))
+        
+        try:
+            resp, _ = sock.recvfrom(1024)
+            parts = resp.decode().split(',')
 
-        if resp[0] != 'ERROR':
-            return int(resp[2])
-        else:
-            return "ERROR"
-    except Exception as e:
-            print(f"Erro no UDP: {e}")
+            if parts[0] == 'RESPONSE':
+                return int(parts[2])
+            else:
+                return "ERROR"
+        except Exception as e:
+                print("Erro no UDP: {}".format(e))
         
 def request_file(sock_tcp, fName):
     lenFile = 0
     message = "get,{}".format(fName)
-    sock_tcp.sendall(message.encode('utf-8'))
-
-    with open(fName, 'wb') as file:
-        try:
-            while True:
-                data = sock_tcp.recv(1024)
+    try:
+        sock_tcp.sendall(message.encode('utf-8'))
+        with open(fName, 'wb') as file:
+            while data := sock_tcp.recv(1024):
                 lenFile += len(data)
-                if not data:
-                    break
-                if data.decode('utf-8') == 'ERROR':
+                if data == b'ERROR':
                     lenFile = -1
                     break
                 file.write(data)
-                print(f"Received {len(data)} bytes")
         
-        except socket.timeout:
-            print("Timeout: Nenhum dado recebido.")
-        except Exception as e:
-            print(f"Erro no TCP: {e}")
+    except socket.timeout:
+        print("Timeout: Nenhum dado recebido.")
+    except Exception as e:
+        print(f"Erro no TCP: {e}")
 
+    send_ack(sock_tcp, lenFile, fName)
+    print("Download concluído com {} bytes".format(lenFile) if os.path.exists(fName) else "Falha no download")
+
+def send_ack(sock_tcp, lenFile, fName):
     if lenFile > 0:
         ackMessage = "fcp_ack,{}".format(lenFile)
         sock_tcp.sendall(ackMessage.encode('utf-8'))
@@ -52,7 +54,6 @@ def request_file(sock_tcp, fName):
 
 
 if __name__ == '__main__':
-    sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     config = configparser.ConfigParser()
     config.read('../config.ini')
@@ -60,9 +61,8 @@ if __name__ == '__main__':
     SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 
-    fName = input("Escreva o nome do arquivo: ")
-    TRANSFER_PORT = negotiate_port(sock_udp, fName)
-    print(TRANSFER_PORT)
+    fName = input("Escreva o nome do arquivo: ").strip()
+    TRANSFER_PORT = negotiate_port(fName)
 
     if TRANSFER_PORT != "ERROR":
         sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

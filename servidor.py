@@ -13,46 +13,49 @@ TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
 print(SERVER_ADDRESS, UDP_TRANSFER_PORT, TCP_TRANSFER_PORT)
 
 def udp_negotiation():
-    udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp_sock.bind((SERVER_ADDRESS, UDP_TRANSFER_PORT))
-    print("UDP server listening on port 5698")
-    try:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
+        udp_sock.bind((SERVER_ADDRESS, UDP_TRANSFER_PORT))
+        print("UDP server listening on port {UDP_TRANSFER_PORT}}")
         while True:
-            data, addr = udp_sock.recvfrom(1024)
-            message = "ERROR,PROTOCOLO INVALIDO,,"
-            command,protocol,fName = data.decode('utf-8').split(',')
-            
-            if not data:
-                continue
-            elif command != "REQUEST" or protocol != "TCP" or not os.path.isfile(fName):
-                udp_sock.sendto(message.encode('utf-8'), addr)
-                print("Request inválido")
-            else:
-                message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
-                udp_sock.sendto(message.encode('utf-8'), addr)
-                print("Porta enviada")
-            
-            print(f"UDP Received: {data.decode('utf-8')}")
-    except Exception as e:
-            udp_sock.sendto(message.encode('utf-8'), addr)
-            print(f"Erro no UDP: {e}")
-    finally:
-        print(f"UDP Client disconnected")
-     
-    
+            try:
+                data, addr = udp_sock.recvfrom(1024)
+                message = "ERROR,PROTOCOLO INVALIDO,,"
+                decoded_data = data.decode('utf-8').split(',')
+
+                if not data:
+                    continue
+                if len(decoded_data) != 3:
+                    send_error_message(message, addr, udp_sock)
+                    continue
+
+                command,protocol,fName = decoded_data
+
+                if command == "REQUEST" and protocol == "TCP" and os.path.isfile(fName):
+                    message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
+                    udp_sock.sendto(message.encode('utf-8'), addr)
+                    print("Porta enviada")
+                else:
+                    send_error_message(message, addr, udp_sock)
+                
+                print(f"UDP Received: {data.decode('utf-8')}")
+
+            except Exception as e:
+                    udp_sock.sendto(message.encode('utf-8'), addr)
+                    print(f"Erro no UDP: {e}")
+
+def send_error_message(message, addr, udp_sock):
+    udp_sock.sendto(message.encode('utf-8'), addr)
+    print("Request inválido")
 
 def send_file(fileName, conn):
     try:
         with open(fileName, 'rb') as file:
-            while True:
-                data = file.read(1024)
-                if not data:
-                    break
+            while data := file.read(1024):
                 conn.send(data)
-        print("Arquivo enviado")
+        print(f"Arquivo {fileName} enviado")
     except FileNotFoundError:
-        print("Arquivo não encontrado")
         conn.send("ERROR".encode('utf-8'))
+        print("Arquivo não encontrado")
     except Exception as e:
         print(f"Erro ao enviar arquivo: {e}")
     finally:
@@ -62,9 +65,9 @@ def handle_tcp_client(conn, addr):
     print(f"TCP Client connected from {addr}")
     try:
         while True:
-            data = conn.recv(1024).decode('utf-8').split(",")  # Decodifica e remove espaços
-            command = data[0].strip()
-            filename = data[1].strip()
+            data = conn.recv(1024).decode('utf-8').strip().split(",")  # Decodifica e remove espaços
+            command = data[0]
+            filename = data[1]
 
             if command == "fcp_ack":
                 return
@@ -73,8 +76,6 @@ def handle_tcp_client(conn, addr):
             else:
                 print("Comando inválido")
 
-    except socket.timeout:
-        print("Timeout: Nenhum dado recebido.")
     except Exception as e:
         print(f"Erro no TCP: {e}")
     finally:
