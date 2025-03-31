@@ -1,10 +1,16 @@
 import socket
 import threading
 import os
+import configparser
 
-SERVER_ADDRESS = '0.0.0.0'
-UDP_TRANSFER_PORT = 5698
-TCP_TRANSFER_PORT = 6000
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
+UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
+TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
+
+print(SERVER_ADDRESS, UDP_TRANSFER_PORT, TCP_TRANSFER_PORT)
 
 def udp_negotiation():
     udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

@@ -1,11 +1,9 @@
 import socket
 import os
-
-SERVER_ADDRESS = '0.0.0.0'
-sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+import configparser
 
 def negotiate_port(sock, fName):
-    sock.connect(('0.0.0.0', 5698))
+    sock.connect((SERVER_ADDRESS, UDP_TRANSFER_PORT))
     try:
         message = "REQUEST,TCP,{}".format(fName)
         sock.sendall(message.encode('utf-8'))
@@ -53,14 +51,23 @@ def request_file(sock_tcp, fName):
     sock_tcp.close() 
 
 
-fName = input("Escreva o nome do arquivo: ")
-TRANSFER_PORT = negotiate_port(sock_udp, fName)
-print(TRANSFER_PORT)
+if __name__ == '__main__':
+    sock_udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-if TRANSFER_PORT != "ERROR":
-    sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock_tcp.settimeout(5)  # Timeout de 5 segundos
-    sock_tcp.connect((SERVER_ADDRESS, TRANSFER_PORT))
-    request_file(sock_tcp, fName)
-else:
-    print("Problema na negociação UDP")
+    config = configparser.ConfigParser()
+    config.read('../config.ini')
+
+    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
+    UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
+
+    fName = input("Escreva o nome do arquivo: ")
+    TRANSFER_PORT = negotiate_port(sock_udp, fName)
+    print(TRANSFER_PORT)
+
+    if TRANSFER_PORT != "ERROR":
+        sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock_tcp.settimeout(5)  # Timeout de 5 segundos
+        sock_tcp.connect((SERVER_ADDRESS, TRANSFER_PORT))
+        request_file(sock_tcp, fName)
+    else:
+        print("Problema na negociação UDP")
