@@ -20,7 +20,7 @@ def udp_negotiation():
             try:
                 data, addr = udp_sock.recvfrom(1024)
                 message = "ERROR,PROTOCOLO INVALIDO,,"
-                decoded_data = data.decode('utf-8').split(',')
+                decoded_data = data.decode().split(',')
 
                 if not data:
                     continue
@@ -32,19 +32,19 @@ def udp_negotiation():
 
                 if command == "REQUEST" and protocol == "TCP" and os.path.isfile(fName):
                     message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
-                    udp_sock.sendto(message.encode('utf-8'), addr)
+                    udp_sock.sendto(message.encode(), addr)
                     print("Porta enviada")
                 else:
                     send_error_message(message, addr, udp_sock)
                 
-                print(f"UDP Received: {data.decode('utf-8')}")
+                print(f"UDP Received: {data.decode()}")
 
             except Exception as e:
-                    udp_sock.sendto(message.encode('utf-8'), addr)
+                    udp_sock.sendto(message.encode(), addr)
                     print(f"Erro no UDP: {e}")
 
 def send_error_message(message, addr, udp_sock):
-    udp_sock.sendto(message.encode('utf-8'), addr)
+    udp_sock.sendto(message.encode(), addr)
     print("Request inválido")
 
 def send_file(fileName, conn):
@@ -54,8 +54,10 @@ def send_file(fileName, conn):
                 conn.send(data)
         print(f"Arquivo {fileName} enviado")
     except FileNotFoundError:
-        conn.send("ERROR".encode('utf-8'))
+        conn.send("ERROR".encode())
         print("Arquivo não encontrado")
+    except socket.timeout:
+        print("Timeout: Nenhum dado recebido.")
     except Exception as e:
         print(f"Erro ao enviar arquivo: {e}")
     finally:
@@ -65,7 +67,7 @@ def handle_tcp_client(conn, addr):
     print(f"TCP Client connected from {addr}")
     try:
         while True:
-            data = conn.recv(1024).decode('utf-8').strip().split(",")  # Decodifica e remove espaços
+            data = conn.recv(1024).decode().strip().split(",")  # Decodifica e remove espaços
             command = data[0]
             filename = data[1]
 

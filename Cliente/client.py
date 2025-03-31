@@ -6,7 +6,7 @@ def negotiate_port(fName):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.settimeout(5)
         message = "REQUEST,TCP,{}".format(fName)
-        sock.sendto(message.encode('utf-8'), (SERVER_ADDRESS, UDP_TRANSFER_PORT))
+        sock.sendto(message.encode(), (SERVER_ADDRESS, UDP_TRANSFER_PORT))
         
         try:
             resp, _ = sock.recvfrom(1024)
@@ -23,7 +23,7 @@ def request_file(sock_tcp, fName):
     lenFile = 0
     message = "get,{}".format(fName)
     try:
-        sock_tcp.sendall(message.encode('utf-8'))
+        sock_tcp.sendall(message.encode())
         with open(fName, 'wb') as file:
             while data := sock_tcp.recv(1024):
                 lenFile += len(data)
@@ -43,7 +43,7 @@ def request_file(sock_tcp, fName):
 def send_ack(sock_tcp, lenFile, fName):
     if lenFile > 0:
         ackMessage = "fcp_ack,{}".format(lenFile)
-        sock_tcp.sendall(ackMessage.encode('utf-8'))
+        sock_tcp.sendall(ackMessage.encode())
         print(ackMessage)
     else:
         os.remove(fName)
