@@ -1,8 +1,27 @@
+"""Cliente para transferência de arquivos via UDP/TCP.
+
+Realiza a negociação de porta via UDP e transfere arquivos via TCP.
+Configurações do servidor são lidas de um arquivo `config.ini`.
+"""
+
 import socket
 import os
 import configparser
 
 def negotiate_port(fName):
+    """
+    Negocia uma porta TCP com o servidor via UDP.
+
+    Args:
+        fName (str): Nome do arquivo solicitado.
+
+    Returns:
+        int: Porta TCP para conexão.
+        str: "ERROR" se a negociação falhar.
+
+    Raises:
+        Exception: Exceção genérica em caso de falha na comunicação UDP.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.settimeout(5)
         message = "REQUEST,TCP,{}".format(fName)
@@ -20,6 +39,15 @@ def negotiate_port(fName):
                 print("Erro no UDP: {}".format(e))
         
 def request_file(sock_tcp, fName):
+    """
+    Solicita e recebe um arquivo via TCP através do comando 'get,{fName}
+    O arquivo é então salvo em blocos de 1024 bytes
+    Ao receber o arquivo inteiro é enviado um ack para o servidor. 
+
+    Args:
+        sock_tcp (socket.socket): Socket TCP conectado ao servidor.
+        fName (str): Nome do arquivo a ser baixado.
+    """
     lenFile = 0
     message = "get,{}".format(fName)
     try:
@@ -41,6 +69,16 @@ def request_file(sock_tcp, fName):
     print("Download concluído com {} bytes".format(lenFile) if os.path.exists(fName) else "Falha no download")
 
 def send_ack(sock_tcp, lenFile, fName):
+    """
+    Envia confirmação (ACK) ao servidor após o download.
+    Descarta arquivos caso tenha um problema na transmissão
+    Após o envio do ACK, fecha a conexão.
+
+    Args:
+        sock_tcp (socket.socket): Socket TCP conectado.
+        lenFile (int): Tamanho do arquivo recebido em bytes.
+        fName (str): Nome do arquivo.
+    """
     if lenFile > 0:
         ackMessage = "fcp_ack,{}".format(lenFile)
         sock_tcp.sendall(ackMessage.encode())

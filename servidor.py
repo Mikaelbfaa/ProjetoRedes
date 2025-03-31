@@ -1,26 +1,40 @@
+"""
+Servidor para negociação UDP e transferência TCP de arquivos.
+
+Inicia threads para UDP (negociação de porta) e TCP (transferência).
+Configurações são lidas de um arquivo `config.ini`.
+"""
+
 import socket
 import threading
 import os
 import configparser
 
+# Inicializando o Config Parser para ler as as configurações iniciais
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+# Armazenando as configurações iniciais
 SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
 UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
 
-print(SERVER_ADDRESS, UDP_TRANSFER_PORT, TCP_TRANSFER_PORT)
-
 def udp_negotiation():
+    """
+    Gerencia a negociação de porta via UDP. Escutando na porta 'UDP_TRANSFER_PORT'.
+    Valida requisições no formato 'REQUEST,TCP,{fName}'.
+    Responde com 'RESPONSE,TCP,{porta},{fName}' se o arquivo existir.
+    Envia mensagem de erro para requisições inválidas ou se o arquivo não existir.
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
         udp_sock.bind((SERVER_ADDRESS, UDP_TRANSFER_PORT))
-        print("UDP server listening on port {UDP_TRANSFER_PORT}}")
+        print(f"Servidor UDP ouvindo na porta {UDP_TRANSFER_PORT}")
         while True:
             try:
                 data, addr = udp_sock.recvfrom(1024)
                 message = "ERROR,PROTOCOLO INVALIDO,,"
                 decoded_data = data.decode().split(',')
+                print(f"UDP recebido: {data.decode()}")
 
                 if not data:
                     continue
@@ -37,17 +51,34 @@ def udp_negotiation():
                 else:
                     send_error_message(message, addr, udp_sock)
                 
-                print(f"UDP Received: {data.decode()}")
-
             except Exception as e:
                     udp_sock.sendto(message.encode(), addr)
                     print(f"Erro no UDP: {e}")
 
 def send_error_message(message, addr, udp_sock):
+    """Envia uma mensagem de erro para um cliente via UDP.
+    A mensagem deve seguir o protocolo definido, com 4 campos separados por vírgula
+
+
+    Args:
+        message (str): Mensagem de erro formatada para envio (ex: "ERROR,PROTOCOLO INVALIDO,,").
+        addr (tuple): Endereço do cliente no formato (IP, porta).
+        udp_sock (socket.socket): Socket UDP configurado para comunicação.
+    """
     udp_sock.sendto(message.encode(), addr)
     print("Request inválido")
 
 def send_file(fileName, conn):
+    """
+    Envia um arquivo via TCP.
+
+    Args:
+        fileName (str): Nome do arquivo a ser enviado.
+        conn (socket.socket): Conexão TCP com o cliente.
+
+    Raises:
+        FileNotFoundError: Se o arquivo não existir localmente.
+    """
     try:
         with open(fileName, 'rb') as file:
             while data := file.read(1024):
@@ -64,32 +95,51 @@ def send_file(fileName, conn):
         conn.shutdown(socket.SHUT_WR)
 
 def handle_tcp_client(conn, addr):
-    print(f"TCP Client connected from {addr}")
+    """Gerencia a interação com um cliente TCP. 
+    Processa comandos 'get,{fName}' para enviar arquivos
+    'fcp_ack' para encerrar a comunicação.
+
+    Args:
+        conn (socket.socket): Conexão TCP estabelecida.
+        addr (tuple): Endereço (IP, porta) do cliente.
+    """
+    print(f"Cliente TCP conectado em: {addr}")
     try:
         while True:
             data = conn.recv(1024).decode().strip().split(",")  # Decodifica e remove espaços
             command = data[0]
             filename = data[1]
 
-            if command == "fcp_ack":
-                return
-            elif command == "get":
+            if command == "get":
                 send_file(filename, conn)  # Envia o arquivo
+
+                ack_data = conn.recv(1024).decode().strip().split(',')
+                if ack_data[0] == "fcp_ack":
+                    print(f"ACK recevido: {ack_data}")
+                    return
+                else:
+                    print("ACK inválido ou não recebido")
+                    return
+            elif command == "fcp_ack":
+                print("ACK recebido sem contexto de envio")
             else:
-                print("Comando inválido")
+                print(f"Comando inválido: {command}")
 
     except Exception as e:
         print(f"Erro no TCP: {e}")
     finally:
-        print(f"TCP Client disconnected from {addr}")
+        print(f"Cliente TCP desconectado em: {addr}")
         conn.close()
 
 def tcp_echo():
+    """Escuta conexões TCP e inicia threads para clientes, utilizando a porta
+    'TCP_TRANSFER_PORT', encontrada no config.ini. Suporta até 5 conexões simultâneas
+    """
     tcp_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    tcp_sock.bind(('0.0.0.0', 6000))
+    tcp_sock.bind((SERVER_ADDRESS, TCP_TRANSFER_PORT))
     tcp_sock.listen(5)
-    print("TCP server listening on port 6000")
+    print(f"Servidor TCP ouvindo na porta {TCP_TRANSFER_PORT}")
     while True:
         conn, addr = tcp_sock.accept()
         client_thread = threading.Thread(target=handle_tcp_client, args=(conn, addr))
