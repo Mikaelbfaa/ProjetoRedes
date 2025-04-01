@@ -7,17 +7,7 @@ Configurações são lidas de um arquivo `config.ini`.
 
 import socket
 import threading
-import os
 import configparser
-
-# Inicializando o Config Parser para ler as as configurações iniciais
-config = configparser.ConfigParser()
-config.read('config.ini')
-
-# Armazenando as configurações iniciais
-SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
-UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
-TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
 
 def udp_negotiation():
     """
@@ -44,7 +34,7 @@ def udp_negotiation():
 
                 command,protocol,fName = decoded_data
 
-                if command == "REQUEST" and protocol == "TCP" and os.path.isfile(fName):
+                if command == "REQUEST" and protocol == "TCP" and (fName in AVAILABLE_FILES):
                     message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
                     udp_sock.sendto(message.encode(), addr)
                     print("Porta enviada")
@@ -141,6 +131,18 @@ def tcp_echo():
         client_thread.start()
 
 if __name__ == '__main__':
+    # Inicializando o Config Parser para ler as as configurações iniciais
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # Armazenando as configurações iniciais
+    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
+    UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
+    TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
+
+    # Armazenando arquivos disponíveis para envio
+    AVAILABLE_FILES = dict(config.items('AVAILABLE_FILES')).values()
+
     # Iniciar thread para UDP
     udp_thread = threading.Thread(target=udp_negotiation)
     udp_thread.daemon = True

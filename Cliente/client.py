@@ -68,7 +68,7 @@ def request_file(sock_tcp, fName):
 def send_ack(sock_tcp, lenFile, fName):
     """
     Envia confirmação (ACK) ao servidor após o download.
-    Descarta arquivos caso tenha um problema na transmissão
+    Descarta arquivos caso receba um arquivo vazio.
     Após o envio do ACK, fecha a conexão.
 
     Args:
