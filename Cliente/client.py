@@ -55,9 +55,6 @@ def request_file(sock_tcp, fName):
         with open(fName, 'wb') as file:
             while data := sock_tcp.recv(1024):
                 lenFile += len(data)
-                if data == b'ERROR':
-                    lenFile = -1
-                    break
                 file.write(data)
         
     except socket.timeout:
@@ -83,7 +80,7 @@ def send_ack(sock_tcp, lenFile, fName):
         ackMessage = "fcp_ack,{}".format(lenFile)
         sock_tcp.sendall(ackMessage.encode())
         print(ackMessage)
-    else:
+    elif os.path.isfile(fName):
         os.remove(fName)
         print("Problema no envio")
 

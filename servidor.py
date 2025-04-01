@@ -75,18 +75,12 @@ def send_file(fileName, conn):
     Args:
         fileName (str): Nome do arquivo a ser enviado.
         conn (socket.socket): Conexão TCP com o cliente.
-
-    Raises:
-        FileNotFoundError: Se o arquivo não existir localmente.
     """
     try:
         with open(fileName, 'rb') as file:
             while data := file.read(1024):
                 conn.send(data)
         print(f"Arquivo {fileName} enviado")
-    except FileNotFoundError:
-        conn.send("ERROR".encode())
-        print("Arquivo não encontrado")
     except socket.timeout:
         print("Timeout: Nenhum dado recebido.")
     except Exception as e:
