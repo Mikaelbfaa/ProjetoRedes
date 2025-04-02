@@ -97,7 +97,7 @@ if __name__ == '__main__':
     SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 
-    fName = sys.argv[1].strip()
+    fName = sys.argv[1]
     TRANSFER_PORT = negotiate_port(fName)
 
     if TRANSFER_PORT != "ERROR":
