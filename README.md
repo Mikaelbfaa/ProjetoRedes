@@ -24,3 +24,15 @@ A entrega final do projeto consiste nos itens detalhados na tabela abaixo. Certi
 | 4      | **Arquivo de Captura de Tráfego** (`.pcapng`) | Repositório Git (este)            |
 | 5      | **Relatório de Análise** (PDF ou Markdown)   | Google Classroom (1 por equipe)   |
 
+## Como Executar (Exemplo Básico)
+
+1.  **Configuração:** Certifique-se de que o arquivo `config.ini` está presente na mesma pasta dos scripts e configurado corretamente com as portas desejadas e os caminhos para os arquivos `a.txt`,`b.txt` e `foto.png`.
+2.  **Iniciar o Servidor:**
+    
+    ```bash
+    python servidor_ftcp.py
+    ```
+3.  **Executar o Cliente (em outro terminal):**
+    ```bash
+    python cliente_ftcp.py a.txt
+    ```
