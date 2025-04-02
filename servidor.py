@@ -81,7 +81,7 @@ def send_file(fileName, conn):
 def handle_tcp_client(conn, addr):
     """Gerencia a interação com um cliente TCP. 
     Processa comandos 'get,{fName}' para enviar arquivos
-    'fcp_ack' para encerrar a comunicação.
+    'ftcp_ack' para encerrar a comunicação.
 
     Args:
         conn (socket.socket): Conexão TCP estabelecida.
@@ -98,13 +98,13 @@ def handle_tcp_client(conn, addr):
                 send_file(filename, conn)  # Envia o arquivo
 
                 ack_data = conn.recv(1024).decode().strip().split(',')
-                if ack_data[0] == "fcp_ack":
+                if ack_data[0] == "ftcp_ack":
                     print(f"ACK recevido: {ack_data}")
                     return
                 else:
                     print("ACK inválido ou não recebido")
                     return
-            elif command == "fcp_ack":
+            elif command == "ftcp_ack":
                 print("ACK recebido sem contexto de envio")
             else:
                 print(f"Comando inválido: {command}")

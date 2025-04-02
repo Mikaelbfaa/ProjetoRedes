@@ -7,6 +7,7 @@ Configurações do servidor são lidas de um arquivo `config.ini`.
 import socket
 import os
 import configparser
+import sys
 
 def negotiate_port(fName):
     """
@@ -77,7 +78,7 @@ def send_ack(sock_tcp, lenFile, fName):
         fName (str): Nome do arquivo.
     """
     if lenFile > 0:
-        ackMessage = "fcp_ack,{}".format(lenFile)
+        ackMessage = "ftcp_ack,{}".format(lenFile)
         sock_tcp.sendall(ackMessage.encode())
         print(ackMessage)
     elif os.path.isfile(fName):
@@ -96,7 +97,7 @@ if __name__ == '__main__':
     SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 
-    fName = input("Escreva o nome do arquivo: ").strip()
+    fName = sys.argv[1].strip()
     TRANSFER_PORT = negotiate_port(fName)
 
     if TRANSFER_PORT != "ERROR":
