@@ -97,8 +97,13 @@ if __name__ == '__main__':
     SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 
-    fName = sys.argv[1]
-    TRANSFER_PORT = negotiate_port(fName)
+    
+    if len(sys.argv) > 1:
+        fName = sys.argv[1]
+        TRANSFER_PORT = negotiate_port(fName)
+    else:
+        print("Adicione o nome do arquivo no formato: \033[34mpython client.py nome_arquivo\033[0m")
+        TRANSFER_PORT = "ERROR"
 
     if TRANSFER_PORT != "ERROR":
         sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
