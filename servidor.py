@@ -15,6 +15,9 @@ def udp_negotiation():
     Valida requisições no formato 'REQUEST,TCP,{fName}'.
     Responde com 'RESPONSE,TCP,{porta},{fName}' se o arquivo existir.
     Envia mensagem de erro para requisições inválidas ou se o arquivo não existir.
+
+    Note:
+        FNF = Arquivo não encontrado
     """
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_sock:
         udp_sock.bind((SERVER_ADDRESS, UDP_TRANSFER_PORT))
@@ -38,6 +41,9 @@ def udp_negotiation():
                     message = "RESPONSE,TCP,{0},{1}".format(TCP_TRANSFER_PORT, fName)
                     udp_sock.sendto(message.encode(), addr)
                     print("Porta enviada")
+                elif fName not in AVAILABLE_FILES:
+                    message = "ERROR,FNF,,"
+                    send_error_message(message, addr, udp_sock)
                 else:
                     send_error_message(message, addr, udp_sock)
                 
@@ -136,7 +142,7 @@ if __name__ == '__main__':
     config.read('config.ini')
 
     # Armazenando as configurações iniciais
-    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
+    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADDRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
     TCP_TRANSFER_PORT = int(config['SERVER_CONFIG']['TCP_PORT'])
 

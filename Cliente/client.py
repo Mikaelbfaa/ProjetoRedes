@@ -17,8 +17,9 @@ def negotiate_port(fName):
         fName (str): Nome do arquivo solicitado.
 
     Returns:
-        int: Porta TCP para conexão.
+        str: Porta TCP para conexão.
         str: "ERROR" se a negociação falhar.
+        str: "FNF" se o arquivo requerido não existir
 
     Raises:
         Exception: Exceção genérica em caso de falha na comunicação UDP.
@@ -33,7 +34,9 @@ def negotiate_port(fName):
             parts = resp.decode().split(',')
 
             if parts[0] == 'RESPONSE':
-                return int(parts[2])
+                return parts[2]
+            elif parts[1] == 'FNF':
+                return parts[1]
             else:
                 return "ERROR"
         except Exception as e:
@@ -94,7 +97,7 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read('../config.ini')
 
-    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADRESS']
+    SERVER_ADDRESS = config['SERVER_CONFIG']['SERVER_ADDRESS']
     UDP_TRANSFER_PORT = int(config['SERVER_CONFIG']['UDP_PORT'])
 
     
@@ -105,10 +108,12 @@ if __name__ == '__main__':
         print("Adicione o nome do arquivo no formato: \033[34mpython client.py nome_arquivo\033[0m")
         TRANSFER_PORT = "ERROR"
 
-    if TRANSFER_PORT != "ERROR":
+    if TRANSFER_PORT != "ERROR" and TRANSFER_PORT != "FNF":
         sock_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock_tcp.settimeout(5)  # Timeout de 5 segundos
-        sock_tcp.connect((SERVER_ADDRESS, TRANSFER_PORT))
+        sock_tcp.connect((SERVER_ADDRESS, int(TRANSFER_PORT)))
         request_file(sock_tcp, fName)
+    elif TRANSFER_PORT == "FNF":
+        print("O arquivo requisitado não existe")
     else:
         print("Problema na negociação UDP")
